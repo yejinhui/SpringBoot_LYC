@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysHomeInfoDao">
+
+    <!--============================轮播图查询============================-->
+    <select id="selectImgList" resultType="java.util.HashMap">
+        select img_link, `desc`, url, sort_id
+        from sys_home_image
+        where only_pre = 'RChart' and status = 1
+    </select>
+
+    <!--============================遍历显示图片与描述数据============================-->
+    <select id="selectImgInfoList" resultType="com.example.springbootdemo.db.pojo.SysHomeImage">
+        select img_link, `desc`, url, sort_id,title,content,but_con,img_time
+        from sys_home_image
+        where only_pre = 'ECard' and status = 1
+    </select>
+</mapper>

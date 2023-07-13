@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysIconDao">
+
+    <!--============================查询全部图片信息============================-->
+    <select id="searchIconName" resultType="java.util.HashMap">
+        select id,icon_name AS iconName
+        from sys_icon
+        where `status`=1
+    </select>
+</mapper>

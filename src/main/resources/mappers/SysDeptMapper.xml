@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysDeptDao">
+
+    <!--============================查詢部门下拉内容============================-->
+    <select id="selectDeptHandle" resultType="java.util.HashMap">
+        select dept_name AS deptName,status,id
+        from sys_dept
+        where status = 1
+    </select>
+
+    <!--============================查询部门的数据============================-->
+    <select id="searchDeptByPage" resultType="com.example.springbootdemo.db.vo.SysDeptVo">
+        select sys_dept.id
+             , sys_dept.dept_name AS deptName
+             , sys_dept.tel
+             , sys_dept.email
+             , sys_dept.`desc`
+             , sys_dept.status
+             , DATE_FORMAT(sys_dept.create_time,'%Y-%m-%d %H:%i:%S') AS createTime
+             ,(select count(sys_user.id) from sys_user where sys_user.dept_id = sys_dept.id and sys_user.status = 1) AS emps
+        from sys_dept
+        where 1=1
+        <if test="deptName!=null">
+            AND sys_dept.dept_name LIKE '%${deptName}%'
+        </if>
+        <if test="userId!=null">
+            AND sys_dept.id = (select dept_id from sys_user where id = #{userId})
+        </if>
+        order by sys_dept.id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询部门的数据总页数============================-->
+    <select id="searchDeptCount" resultType="java.lang.Long">
+        select count(*)
+        from sys_dept
+        where 1=1
+        <if test="deptName!=null">
+            AND sys_dept.dept_name = #{deptName}
+        </if>
+        <if test="userId!=null">
+            AND sys_dept.id = (select dept_id from sys_user where id = #{userId})
+        </if>
+    </select>
+
+    <!--============================根据部门Id删除部门信息============================-->
+    <delete id="deleteDeptByIds">
+        DELETE FROM sys_dept
+        WHERE id IN
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================根据部门Id查询部门信息============================-->
+    <select id="selectDeptById" resultType="java.util.HashMap">
+        select dept_name AS deptName
+             , tel
+             , email
+             , `desc`
+             , status
+             , DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') AS createTime
+             ,(select count(sys_user.id) from sys_user where sys_user.dept_id = sys_dept.id and sys_user.status = 1) AS emps
+            ,(select GROUP_CONCAT(sys_user.name separator "," )
+               from sys_user where sys_user.dept_id = sys_dept.id
+        ) AS userNames
+        from sys_dept
+        where id = #{id}
+    </select>
+
+    <!--============================根据部门名称和Id查询是否存在重复============================-->
+    <select id="selectDeptByName" resultType="java.lang.Integer">
+        select count(*)
+        from sys_dept
+        where dept_name = #{deptName} AND id!=#{id}
+    </select>
+
+    <!--============================根据部门名称和Id查询是否存在重复============================-->
+    <update id="updateDept" parameterType="HashMap">
+        UPDATE sys_dept
+        SET dept_name = #{deptName},tel=#{tel},email=#{email},`status`=#{status},`desc`=#{desc},create_time=DATE_FORMAT(#{createTime},'%Y-%m-%d %H:%i:%S')
+        WHERE id = #{id}
+    </update>
+
+    <!--============================新增部门============================-->
+    <insert id="insertDept" parameterType="HashMap">
+        INSERT INTO sys_dept
+        SET dept_name = #{deptName},tel=#{tel},email=#{email},`status`=#{status},`desc`=#{desc},create_time=DATE_FORMAT(#{createTime},'%Y-%m-%d %H:%i:%S')
+    </insert>
+
+    <!--============================查询全部部门信息并导出============================-->
+    <select id="selectAllDeptExcel" resultType="java.util.HashMap">
+        SELECT dept_name AS deptName,tel,email,`status`,DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') AS createTime,`desc`
+        FROM sys_dept
+    </select>
+
+    <!--============================实现导入员部门信息============================-->
+    <insert id="insertDepts" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_dept(dept_name,tel,email,`desc`,create_time,`status`)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+            (#{item.deptName}
+            ,#{item.tel}
+            ,#{item.email}
+            ,#{item.desc}
+            , DATE_FORMAT(#{item.createTime},'%Y-%m-%d %H:%i:%S')
+            ,#{item.status}
+            )
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysCompanyDao">
+
+    <!--============================查询公司下拉内容============================-->
+    <select id="selectCompanyHandle" resultType="java.util.HashMap">
+        select company_name AS companyName,status,id
+        from sys_company
+    </select>
+
+    <!--============================查询公司的数据============================-->
+    <select id="searchCompanyByPage" resultType="com.example.springbootdemo.db.vo.SysCompanyVo">
+        select sys_company.id
+        , sys_company.company_name AS companyName
+        , sys_company.tel
+        , sys_company.address
+        , sys_company.company_eng AS companyEngName
+        , sys_company.`desc`
+        , sys_company.status
+        , DATE_FORMAT(sys_company.create_time,'%Y-%m-%d %H:%i:%S') AS createTime
+        ,(select count(sys_user.id) from sys_user where sys_user.company_id = sys_company.id and sys_user.`status` = 1) AS emps
+        from sys_company
+        where 1=1
+        <if test="companyName!=null">
+            AND sys_company.company_name  LIKE '%${companyName}%'
+        </if>
+        <if test="userId!=null">
+            AND sys_company.id = (select company_id from sys_user where id = #{userId})
+        </if>
+        order by sys_company.id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询公司的数据总页数============================-->
+    <select id="searchCompanyCount" resultType="java.lang.Long">
+        select count(*)
+        from sys_company
+        where 1=1
+        <if test="deptName!=null">
+            AND sys_company.company_name LIKE '%${companyName}%'
+        </if>
+        <if test="userId!=null">
+            AND sys_company.id = (select company_id from sys_user where id = #{userId})
+        </if>
+    </select>
+
+    <!--============================根据公司Id删除公司信息============================-->
+    <delete id="deleteCompanyByIds">
+        DELETE FROM sys_company
+        WHERE id IN
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================根据公司Id查询公司信息============================-->
+    <select id="selectCompanyById" resultType="java.util.HashMap">
+        select company_name AS companyName
+             , tel
+             , company_eng AS companyEngName
+             , address
+             , `desc`
+             , status
+             , DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') AS createTime
+             ,(select count(sys_user.id) from sys_user where sys_user.company_id = sys_company.id and sys_user.status = 1) AS emps
+             ,(select GROUP_CONCAT(sys_user.name separator "," )
+               from sys_user where sys_user.company_id = sys_company.id
+        ) AS userNames
+        from sys_company
+        where id = #{id}
+    </select>
+
+    <!--============================根据公司名称和Id查询是否存在重复============================-->
+    <select id="selectCompanyByName" resultType="java.lang.Integer">
+        select count(*)
+        from sys_company
+        where company_name = #{companyName} AND id!=#{id}
+    </select>
+
+    <!--============================根据公司名称和Id查询是否存在重复============================-->
+    <update id="updateCompany" parameterType="HashMap">
+        UPDATE sys_company
+        SET company_name = #{companyName},
+            tel=#{tel},
+            company_eng=#{companyEngName},
+            address=#{address},
+            `status`=#{status},
+            `desc`=#{desc},
+            create_time=DATE_FORMAT(#{createTime}, '%Y-%m-%d %H:%i:%S')
+        WHERE id = #{id}
+    </update>
+
+    <!--============================新增公司============================-->
+    <insert id="insertCompany" parameterType="HashMap">
+        INSERT INTO sys_company
+        SET company_name = #{companyName},tel=#{tel},company_eng=#{companyEngName},address=#{address},`status`=#{status},`desc`=#{desc},create_time=DATE_FORMAT(#{createTime},'%Y-%m-%d %H:%i:%S')
+    </insert>
+
+    <!--============================查询全部公司信息并导出============================-->
+    <select id="selectAllCompanyExcel" resultType="java.util.HashMap">
+        SELECT company_name AS companyName,tel,company_eng AS companyEngName,address,`status`,DATE_FORMAT(create_time,'%Y-%m-%d %H:%i:%S') AS createTime,`desc`
+        FROM sys_company
+    </select>
+
+    <!--============================导入/批量新增所属公司============================-->
+    <insert id="insertCompanys" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_company(company_name,tel,company_eng,`desc`,create_time,`status`,address)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+            (#{item.companyName}
+            ,#{item.tel}
+            ,#{item.companyEngName}
+            ,#{item.desc}
+            , DATE_FORMAT(#{item.createTime},'%Y-%m-%d %H:%i:%S')
+            ,#{item.status}
+            ,#{item.address}
+            )
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysRoleDao">
+
+    <!--============================查询分页的内容============================-->
+    <select id="searchRoleByPage" resultType="com.example.springbootdemo.db.vo.SysRoleVo" parameterType="HashMap">
+        SELECT
+        sys_role.id,
+        sys_role.role_name AS roleName,
+        COUNT( sys_user.id ) AS users,
+        JSON_LENGTH ( sys_role.permissions ) AS permissions,
+        sys_role.`desc`,
+        sys_role.systemic
+        FROM sys_role
+        LEFT JOIN sys_user ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE 1=1
+        <if test="roleName!=null">
+            AND sys_role.role_name LIKE '%${roleName}%'
+        </if>
+        GROUP BY sys_role.id
+        ORDER BY sys_role.id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询总页数============================-->
+    <select id="searchRoleCount" parameterType="HashMap" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM (
+        SELECT sys_role.id
+        FROM sys_role
+        LEFT JOIN sys_user ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE 1=1
+        <if test="roleName!=null">
+            AND sys_role.role_name LIKE '%${roleName}%'
+        </if>
+        GROUP BY sys_role.id
+        ) AS temp
+    </select>
+
+    <!--============================查询有关联的角色============================-->
+    <select id="searchCanDelete" resultType="boolean">
+        SELECT IF( SUM( temp.users ) > 0, FALSE, TRUE ) AS result FROM (
+        SELECT COUNT( sys_user.id ) AS users
+        FROM sys_role
+        JOIN sys_user ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE sys_role.id IN
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+        GROUP BY sys_role.id
+        ) temp
+    </select>
+
+    <!--============================删除角色============================-->
+    <delete id="deleteRoleByIds">
+        DELETE FROM sys_role
+        WHERE id IN
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+        AND systemic=FALSE
+    </delete>
+
+    <!--============================根据Id进行查询角色============================-->
+    <select id="searchRoleById" parameterType="int" resultType="HashMap">
+        SELECT id,
+               role_name AS roleName,
+               permissions,
+               `desc`,
+               default_permissions AS defaultPermissions
+        FROM sys_role
+        WHERE id = #{id}
+    </select>
+
+    <!--============================根据Id查询角色信息============================-->
+    <select id="searchUserIdByRoleId" parameterType="int" resultType="int">
+        SELECT sys_user.id
+        FROM sys_role
+        JOIN sys_user ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE sys_role.id=#{id}
+    </select>
+
+    <!--============================新增角色信息============================-->
+    <insert id="insertRole" parameterType="com.example.springbootdemo.db.pojo.SysRole">
+        INSERT INTO sys_role
+        SET role_name=#{roleName},
+        permissions=#{permissions}
+        <if test="desc!=null">
+            ,`desc`=#{desc}
+        </if>
+    </insert>
+
+    <!--============================更新角色信息============================-->
+    <update id="updateRole" parameterType="com.example.springbootdemo.db.pojo.SysRole">
+        UPDATE sys_role
+        SET role_name=#{roleName},
+            `desc`=#{desc},
+            permissions=#{permissions}
+        WHERE id=#{id} AND id!=0
+    </update>
+
+    <!--============================查询全部角色信息============================-->
+    <select id="searchAllRole" resultType="HashMap">
+        SELECT id,
+               role_name AS roleName
+        FROM sys_role ORDER BY id
+    </select>
+
+    <!--============================角色管理详情============================-->
+    <select id="searchRoleAllById" resultType="java.util.HashMap">
+        select sys_role.role_name AS roleName
+             ,sys_role.`desc`
+             ,sys_role.systemic
+             ,(select GROUP_CONCAT(sys_user.name separator "," )
+               from sys_user where JSON_CONTAINS(sys_user.role,CONVERT(sys_role.id,CHAR))
+        ) AS userNames
+             ,(select count(sys_user.id)
+               from sys_user where JSON_CONTAINS(sys_user.role,CONVERT(sys_role.id,CHAR))
+        ) AS users
+             ,(select GROUP_CONCAT(module_name , '(' , action_name , ')' separator "," )
+               from sys_permission
+                JOIN sys_module ON sys_permission.module_id=sys_module.id
+                JOIN sys_action ON sys_permission.action_id=sys_action.id
+               where JSON_CONTAINS(sys_role.permissions,CONVERT(sys_permission.id,CHAR))
+        ) AS permissionNames
+             ,(select count(sys_permission.id)
+               from sys_permission
+               where JSON_CONTAINS(sys_role.permissions,CONVERT(sys_permission.id,CHAR))
+        ) AS permissions
+        from sys_role
+        where sys_role.id = #{id}
+    </select>
+
+
+
+
+</mapper>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysDropDownDao">
+
+    <!--============================下拉功能============================-->
+    <select id="searchDropDownElInfo" resultType="java.util.HashMap">
+        select dropdown_name, icon, methods_name
+        from sys_dropdown_el
+        where status = 1
+        ORDER BY sort_id
+    </select>
+</mapper>

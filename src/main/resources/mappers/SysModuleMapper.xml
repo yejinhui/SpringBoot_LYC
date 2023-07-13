@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysModuleDao">
+
+    <!--============================菜单查询============================-->
+    <select id="queryModuleList" resultType="com.example.springbootdemo.db.pojo.SysModule">
+        select id,module_code,module_name,link, parent_id,icon_name,`index`,default_module AS defaultModule
+        from sys_module
+        where status = 1
+        ORDER BY id
+    </select>
+
+    <!--============================加载菜单下拉============================-->
+    <select id="selectModuleHandle" resultType="java.util.HashMap">
+        select module_name AS moduleName,id,`status`,module_code AS moduleCode
+        from sys_module
+        where status = 1
+    </select>
+
+    <!--============================查询菜单的分页内容============================-->
+    <select id="searchModuleByPage" resultType="com.example.springbootdemo.db.vo.SysModuleVo">
+        select id
+        , module_code AS moduleCode
+        , module_name AS moduleName
+        , link
+        , parent_id AS parentId
+        , icon_name AS iconName
+        ,`status`
+        ,default_module AS defaultModule
+        from sys_module
+        where 1=1
+        <if test="moduleName!=null">
+            AND module_name  LIKE '%${moduleName}%'
+        </if>
+        order by id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询菜单总页数============================-->
+    <select id="searchModuleCount" resultType="java.lang.Long">
+        select count(*)
+        from sys_module
+        where 1=1
+        <if test="moduleName!=null">
+            AND module_name  LIKE '%${moduleName}%'
+        </if>
+    </select>
+
+    <!--============================根据Id查询菜单信息============================-->
+    <select id="selectModuleById" resultType="java.util.HashMap">
+        select id,module_code AS moduleCode
+             ,module_name AS moduleName
+             ,link
+             , parent_id AS parentId
+             ,icon_name AS iconName
+             ,`status`
+            ,default_module AS defaultModule
+        from sys_module
+        where id=#{id}
+        LIMIT 1
+    </select>
+
+    <!--============================根据Id删除菜单信息============================-->
+    <delete id="deleteModuleByIds">
+        delete from sys_module
+        where id in
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================根据菜单id和菜单名称进行查询菜单是否重复============================-->
+    <select id="selectModuleByCode" resultType="java.lang.Integer">
+        select count(*)
+        from sys_module
+        where module_code = #{moduleCode} AND id!=#{id}
+    </select>
+
+    <!--============================更新菜单信息============================-->
+    <update id="updateModule">
+        update sys_module
+        set module_code = #{moduleCode},module_name = #{moduleName},`status` = #{status},default_module = #{defaultModule}
+        <if test="link!=null">
+            ,link = #{link}
+        </if>
+        <if test="parentId!=null">
+            ,parent_id = #{parentId}
+        </if>
+        <if test="iconName!=null">
+            ,icon_name = #{iconName}
+        </if>
+        where id=#{id}
+    </update>
+
+    <!--============================新增菜单信息============================-->
+    <insert id="insertModule">
+        insert into sys_module
+        set module_code = #{moduleCode}
+          ,module_name = #{moduleName}
+          ,`status` = #{status}
+          ,link = #{link}
+          ,parent_id = #{parentId}
+          ,icon_name = #{iconName}
+          ,default_module = #{defaultModule}
+    </insert>
+
+    <!--============================查询全部菜单资料进行导出============================-->
+    <select id="selectAllModuleExcel" resultType="java.util.HashMap">
+        select id
+             , module_code AS moduleCode
+             , module_name AS moduleName
+             , link, parent_id AS parentId
+             , `status`
+             , icon_name AS iconName
+             ,default_module = #{defaultModule}
+        from sys_module
+    </select>
+
+    <!--============================批量导入菜单信息============================-->
+    <insert id="insertImportModule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_module(module_code,module_name,link,parent_id,icon_name,`status`,default_module)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+            (#{item.moduleCode}
+            ,#{item.moduleName}
+            ,#{item.link}
+            ,#{item.parentId}
+            ,#{item.iconName}
+            ,#{item.status}
+            ,#{item.defaultModule}
+            )
+        </foreach>
+    </insert>
+
+
+</mapper>

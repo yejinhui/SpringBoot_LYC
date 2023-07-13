@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysPermissionDao">
+
+    <!--============================查询全部权限============================-->
+    <select id="searchAllPermission" resultType="java.util.HashMap">
+        SELECT
+            sys_permission.id,
+            sys_module.module_name AS moduleName,
+            sys_action.action_name AS actionName
+        FROM sys_permission
+                 JOIN sys_module ON sys_permission.module_id=sys_module.id
+                 JOIN sys_action ON sys_permission.action_id=sys_action.id
+        ORDER BY sys_permission.module_id,sys_permission.id
+    </select>
+
+    <!--============================权限的分页查询============================-->
+    <select id="searchPermissionByPage" resultType="java.util.HashMap">
+        select sys_permission.id,CONCAT( IFNULL(module_name,'') , '(' , IFNULL(action_name,'') , ')' ) AS permissionName
+        ,(select count(sys_role.id)
+        from sys_role
+        where JSON_CONTAINS(sys_role.permissions,CONVERT(sys_permission.id,CHAR))
+        ) AS permissions
+        from sys_permission
+        join sys_action on sys_permission.action_id = sys_action.id
+        join sys_module on sys_permission.module_id = sys_module.id
+        where 1=1
+        <if test="permissionName!=null">
+            and CONCAT( IFNULL(module_name,'') , '(' , IFNULL(action_name,'') , ')' ) LIKE '%${permissionName}%'
+        </if>
+        ORDER BY module_id,action_id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================权限的总页数============================-->
+    <select id="searchPermissionCount" resultType="java.lang.Long">
+        select count(*)
+        from sys_permission
+        join sys_action on sys_permission.action_id = sys_action.id
+        join sys_module on sys_permission.module_id = sys_module.id
+        where 1=1
+        <if test="permissionName!=null">
+            and CONCAT( IFNULL(module_name,'') , '(' , IFNULL(action_name,'') , ')' ) LIKE '%${permissionName}%'
+        </if>
+    </select>
+
+    <!--============================根据ids删除对应权限============================-->
+    <delete id="deletePermissionByIds">
+        delete from sys_permission
+        where id in
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================查询全部权限信息============================-->
+    <select id="selectAllPermissionExcel" resultType="java.util.HashMap">
+        select CONCAT( IFNULL(module_name,'') , '(' , IFNULL(action_name,'') , ')' ) AS permissionName
+        ,(select count(sys_role.id)
+        from sys_role
+        where JSON_CONTAINS(sys_role.permissions,CONVERT(sys_permission.id,CHAR))
+        ) AS permissions
+        from sys_permission
+        join sys_action on sys_permission.action_id = sys_action.id
+        join sys_module on sys_permission.module_id = sys_module.id
+    </select>
+
+    <!--============================根据id查询权限信息============================-->
+    <select id="selectPermissionById" resultType="java.util.HashMap">
+        select module_code AS moduleCode,action_code AS actionCode
+        from sys_permission
+        join sys_action on sys_permission.action_id = sys_action.id
+        join sys_module on sys_permission.module_id = sys_module.id
+        where sys_permission.id = #{id}
+    </select>
+
+    <!--============================查询权限是否重复============================-->
+    <select id="selectPermissionByName" resultType="java.lang.Integer">
+        select count(*)
+        from sys_permission
+        where action_id=(select id from sys_action where action_code = #{actionCode})
+          AND module_id=(select id from sys_module where module_code = #{moduleCode})
+          AND sys_permission.id!=#{id}
+    </select>
+
+    <!--============================根据id新增权限============================-->
+    <insert id="insertPermission">
+        insert into sys_permission
+        set module_id = (select id from sys_module where module_code=#{moduleCode})
+        ,action_id = (select id from sys_action where action_code=#{actionCode})
+        ,permission_name = CONCAT(#{moduleCode},':',#{actionCode})
+    </insert>
+
+    <!--============================根据id更新权限============================-->
+    <update id="updatePermission">
+        update sys_permission
+        set module_id = (select id from sys_module where module_code=#{moduleCode})
+          ,action_id = (select id from sys_action where action_code=#{actionCode})
+          ,permission_name = CONCAT(#{moduleCode},':',#{actionCode})
+        where id = #{id}
+    </update>
+
+
+</mapper>

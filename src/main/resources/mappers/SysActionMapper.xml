@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysActionDao">
+
+    <!--============================查询全部的功能信息============================-->
+    <select id="selectActionHandle" resultType="java.util.HashMap">
+        select
+                action_code AS actionCode
+             , action_name AS actionName
+        from sys_action
+        where status = 1
+    </select>
+
+    <!--============================查询分页的内容============================-->
+    <select id="searchActionByPage" resultType="com.example.springbootdemo.db.vo.SysActionVo">
+        select id
+             , action_code AS actionCode
+             , action_name AS actionName
+             ,default_action AS defaultAction
+             ,`status`
+        from sys_action
+        where 1=1
+        <if test="actionName!=null">
+            AND action_name  LIKE '%${actionName}%'
+        </if>
+        order by id
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询总页数============================-->
+    <select id="searchActionCount" resultType="java.lang.Long">
+        select count(*)
+        from sys_action
+        where 1=1
+        <if test="actionName!=null">
+            AND action_name  LIKE '%${actionName}%'
+        </if>
+    </select>
+
+    <!--============================根据Id查询功能信息============================-->
+    <select id="selectActionById" resultType="java.util.HashMap">
+        select action_code AS actionCode, action_name AS actionName,`status`,default_action AS defaultAction
+        from sys_action
+        where id = #{id}
+    </select>
+
+    <!--============================根据Id查询功能是否是默认功能============================-->
+    <select id="selectActionDefaultById" resultType="java.lang.String">
+        select action_code
+        from sys_action
+        where id=#{id} AND default_action = 1
+    </select>
+
+    <!--============================根据Id删除功能信息============================-->
+    <delete id="deleteActionByIds" >
+        delete from sys_action
+        where id in
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================根据code或者id进行查询功能是否存在============================-->
+    <select id="selectActionByCode" resultType="java.lang.Integer">
+        select count(*)
+        from sys_action where id != #{id} AND action_code = #{actionCode}
+    </select>
+
+    <!--============================根据Id更新功能信息============================-->
+    <update id="updateAction">
+        update sys_action
+        set action_code = #{actionCode},action_name = #{actionName},`status` = #{status},default_action = #{defaultAction}
+        where id = #{id}
+    </update>
+
+    <!--============================新增功能信息============================-->
+    <insert id="insertAction">
+        insert into sys_action
+        set action_code = #{actionCode},action_name = #{actionName},`status` = #{status},default_action = #{defaultAction}
+    </insert>
+
+    <!--============================查询全部功能信息============================-->
+    <select id="selectAllActionExcel" resultType="java.util.HashMap">
+        select action_code AS actionCode,action_name AS actionName,`status`,default_action AS defaultAction
+        from sys_action
+    </select>
+
+
+
+    <insert id="insertImportAction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_action(action_code, action_name, status, default_action)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+            (#{item.actionCode}
+            ,#{item.actionName}
+            ,#{item.status}
+            ,#{item.defaultAction}
+            )
+        </foreach>
+    </insert>
+
+
+
+
+
+
+
+
+
+</mapper>

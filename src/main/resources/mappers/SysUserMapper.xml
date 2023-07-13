@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springbootdemo.db.dao.SysUserDao">
+
+    <!--============================查询用户登录信息============================-->
+    <select id="login" parameterType="HashMap" resultType="Integer">
+        select id
+        from sys_user
+        where username = #{username}
+          and password = #{password} LIMIT 1;
+    </select>
+
+    <!--============================根据用户ID查询用户信息============================-->
+    <select id="searchUserPermissions" parameterType="int" resultType="String">
+        SELECT DISTINCT p.permission_name
+        FROM sys_user u
+                 JOIN sys_role r ON JSON_CONTAINS(u.role, CAST(r.id AS CHAR))
+                 JOIN sys_permission p ON JSON_CONTAINS(r.permissions, CAST(p.id AS CHAR))
+        WHERE u.id = #{userId}
+          AND u.status = 1
+    </select>
+
+    <!--============================查询用户信息是否已存在（username,email）============================-->
+    <select id="register" resultType="Integer">
+        select id
+        from sys_user
+        where username = #{username} OR email = #{email} LIMIT 1
+    </select>
+
+    <!--============================注册用户信息============================-->
+    <insert id="insertUserPermissions" parameterType="com.example.springbootdemo.db.pojo.SysUser">
+        INSERT INTO sys_user
+        SET username=#{username}
+        <if test="password!=null">
+            ,password=#{password}
+        </if>
+        <if test="email!=null">
+            ,email=#{email}
+        </if>
+        <if test="name!=null">
+            ,name=#{name}
+        </if>
+        <if test="sex!=null">
+            ,sex=#{sex}
+        </if>
+        <if test="tel!=null">
+            ,tel=#{tel}
+        </if>
+        <if test="dept_id!=null">
+            ,dept_id=#{dept_id}
+        </if>
+          ,salt=#{salt},code=#{code},role=JSON_Array(#{role}),root=#{root},create_time=#{createtime},login_time=#{logintime},status=#{status}
+    </insert>
+
+    <!--============================根据用户信息查询盐值============================-->
+    <select id="searchUserSalt" resultType="java.lang.String">
+        select distinct salt
+        from sys_user
+        where username = #{username}
+    </select>
+
+    <!--============================更新登录的时间============================-->
+    <update id="updateUserLoginTime" parameterType="HashMap">
+        update sys_user set login_time = #{logintime} where id=#{userId}
+    </update>
+
+    <!--============================查询用户名是否存在============================-->
+    <select id="selectUserNameExit" resultType="java.lang.Integer">
+        select count(1)
+        from sys_user WHERE username=#{username};
+    </select>
+
+    <!--============================查询邮箱是否存在============================-->
+    <select id="selectEmailExit" resultType="java.lang.Integer">
+        select count(1)
+        from sys_user WHERE email=#{email};
+    </select>
+
+    <!--============================查询用户信息============================-->
+    <select id="searchUserSummary" resultType="java.util.HashMap">
+        SELECT name, photo
+        FROM sys_user
+        WHERE id = #{userId}
+          AND status = 1
+    </select>
+
+    <!--============================更新密码============================-->
+    <update id="updatePassword" parameterType="HashMap">
+        update sys_user
+        set password=#{password},salt=#{salt},update_time=#{updatetime}
+        where id = #{userId}
+    </update>
+
+    <!--============================根据用户id查询用户信息============================-->
+    <select id="selectUserInfoHandle" resultType="com.example.springbootdemo.controller.form.SysUserForm">
+        select sys_user.username
+             ,sys_user.name
+             ,sys_user.nickname
+             ,sys_user.photo
+             ,sys_user.sex
+             ,sys_user.email
+             ,sys_user.tel
+             ,sys_user.birthday
+             ,sys_user.hiredate
+             ,sys_dept.dept_name AS deptName
+             ,sys_company.company_name AS companyName
+        from sys_user
+            left join sys_dept on sys_user.dept_id = sys_dept.id
+            left join sys_company on sys_user.company_id = sys_company.id
+        where sys_user.id = #{userId}
+        LIMIT 1
+    </select>
+
+    <!--============================更新个人资料============================-->
+    <update id="updateUserInfo" parameterType="int">
+        update sys_user
+        set
+        sys_user.email = #{email}
+        <if test="nickname!=null">
+            , sys_user.nickname = #{nickname}
+        </if>
+        <if test="photo!=null">
+            , sys_user.photo = #{photo}
+        </if>
+        <if test="sex!=null">
+            , sys_user.sex = #{sex}
+        </if>
+        <if test="tel!=null">
+            , sys_user.tel = #{tel}
+        </if>
+        <if test="birthday!=null">
+            , sys_user.birthday = #{birthday}
+        </if>
+        <if test="hiredate!=null">
+            , sys_user.hiredate = #{hiredate}
+        </if>
+        <if test="username!=null">
+            , sys_user.username = #{username}
+        </if>
+        <if test="deptname!=null">
+            , sys_user.dept_id = (select id from sys_dept where dept_name = #{deptname})
+        </if>
+        <if test="companyname!=null">
+            , sys_user.company_id = (select id from sys_company where company_name = #{companyname})
+        </if>
+        ,sys_user.name = #{name}
+        where sys_user.id = #{userId}
+    </update>
+
+    <!--============================图片路径更新============================-->
+    <update id="updateimg" parameterType="HashMap">
+        update sys_user
+        set photo = #{photo}
+        where id = #{userId}
+    </update>
+
+    <!--============================查询员工分页的内容============================-->
+    <select id="searchEmployeeByPage"  parameterType="HashMap" resultType="com.example.springbootdemo.db.vo.SysEmployeeVo">
+        SELECT sys_user.id,
+        sys_dept.id AS deptId,
+        sys_user.tel,
+        sys_user.code,
+        sys_user.sex,
+        sys_user.name,
+        sys_user.nickname,
+        sys_user.email,
+        sys_user.photo,
+        sys_user.`username`,
+        sys_dept.dept_name AS deptName,
+        sys_company.company_name AS companyName,
+        sys_user.`status`,
+        (
+        SELECT GROUP_CONCAT( role_name separator "," )
+        FROM sys_role
+        WHERE JSON_CONTAINS ( sys_user.role, CONVERT ( id, CHAR ) )
+        ) AS roles,
+        DATE_FORMAT(sys_user.hiredate,'%Y-%m-%d') AS hiredate,
+        DATE_FORMAT(sys_user.login_time,'%Y-%m-%d %H:%i:%S') AS loginDate,
+        DATE_FORMAT(sys_user.create_time,'%Y-%m-%d %H:%i:%S') AS createTime,
+        DATE_FORMAT(sys_user.birthday,'%Y-%m-%d') AS birthday
+        FROM sys_user
+        JOIN sys_dept ON sys_dept.id = sys_user.dept_id
+        JOIN sys_company ON sys_user.company_id = sys_company.id
+        JOIN sys_role ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE 1=1
+        <if test="status!=null">
+            AND sys_user.`status` = #{status}
+        </if>
+        <if test="tel!=null">
+            AND sys_user.tel = #{tel}
+        </if>
+        <if test="role!=null">
+            AND sys_role.role_name=#{role}
+        </if>
+        <if test="sex!=null">
+            AND sys_user.sex = #{sex}
+        </if>
+        <if test="code!=null">
+            AND sys_user.code = #{code}
+        </if>
+        <if test="userId!=null">
+            AND sys_user.id = #{userId}
+        </if>
+        <if test="name!=null">
+            AND sys_user.name LIKE '%${name}%'
+        </if>
+        <if test="startHireDate!=null &amp; endHireDate!=null">
+            AND sys_user.hiredate BETWEEN #{startHireDate} AND #{endHireDate}
+        </if>
+        <if test="startLoginDate!=null &amp; endLoginDate!=null">
+            AND sys_user.login_time BETWEEN #{startLoginDate} AND #{endLoginDate}
+        </if>
+        ORDER BY sys_user.id DESC
+        LIMIT #{start}, #{length}
+    </select>
+
+    <!--============================查询员工总数============================-->
+    <select id="searchEmployeeCount" parameterType="HashMap" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM sys_user
+        JOIN sys_dept ON sys_dept.id = sys_user.dept_id
+        JOIN sys_company ON sys_user.company_id = sys_company.id
+        JOIN sys_role ON JSON_CONTAINS ( sys_user.role, CONVERT ( sys_role.id, CHAR ) )
+        WHERE 1=1
+        <if test="status!=null">
+            AND sys_user.`status` = #{status}
+        </if>
+        <if test="tel!=null">
+            AND sys_user.tel = #{tel}
+        </if>
+        <if test="sex!=null">
+            AND sys_user.sex = #{sex}
+        </if>
+        <if test="code!=null">
+            AND sys_user.code = #{code}
+        </if>
+        <if test="role!=null">
+            AND sys_role.role_name=#{role}
+        </if>
+        <if test="userId!=null">
+            AND sys_user.id = #{userId}
+        </if>
+        <if test="name!=null">
+            AND sys_user.name LIKE '%${name}%'
+        </if>
+        <if test="startHireDate!=null &amp; endHireDate!=null">
+            AND sys_user.hiredate BETWEEN #{startHireDate} AND #{endHireDate}
+        </if>
+        <if test="startLoginDate!=null &amp; endLoginDate!=null">
+            AND sys_user.login_time BETWEEN #{startLoginDate} AND #{endLoginDate}
+        </if>
+    </select>
+
+    <!--============================查询是否是管理员用户============================-->
+    <select id="searchChaoDelete" resultType="java.lang.Boolean">
+        SELECT IF( COUNT( * ) > 0, FALSE, TRUE ) AS result
+        FROM
+        (
+        select distinct sys_permission.permission_name
+        from sys_user
+        join sys_role ON JSON_CONTAINS(sys_user.role, CAST(sys_role.id AS CHAR))
+        JOIN sys_permission ON JSON_CONTAINS(sys_role.permissions, CAST(sys_permission.id AS CHAR))
+        WHERE sys_user.id in
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+        GROUP BY sys_role.id
+        )temp WHERE temp.permission_name='ROOT'
+    </select>
+
+    <!--============================根据Id删除用户============================-->
+    <delete id="deleteUserByIds">
+        DELETE FROM sys_user
+        WHERE id IN
+        <foreach collection="array" open="(" separator="," close=")" item="one">
+            #{one}
+        </foreach>
+    </delete>
+
+    <!--============================根据Id查询用户信息============================-->
+    <select id="searchUserById" resultType="java.util.HashMap">
+        select sys_user.username
+             , sys_user.code
+             , sys_user.nickname
+             , DATE_FORMAT(sys_user.login_time,'%Y-%m-%d %H:%i:%S') AS loginDate
+             , DATE_FORMAT(sys_user.create_time,'%Y-%m-%d %H:%i:%S') AS createTime
+             , sys_user.photo
+             , sys_user.name
+             , sys_user.sex
+             , sys_user.tel
+             , sys_user.email
+             , DATE_FORMAT(sys_user.birthday,'%Y-%m-%d') AS birthday
+             , DATE_FORMAT(sys_user.hiredate,'%Y-%m-%d %H:%i:%S') AS hiredate
+             , sys_user.dept_id AS deptId
+             , sys_user.status
+             , sys_user.company_id AS companyId
+            ,role
+            ,(
+            SELECT GROUP_CONCAT( role_name separator "," )
+            FROM sys_role
+            WHERE JSON_CONTAINS ( sys_user.role, CONVERT ( id, CHAR ) )
+            ) AS roles
+        from sys_user
+        where sys_user.id = #{id}
+        LIMIT 1
+    </select>
+
+    <!--============================根据Id更新图片路径============================-->
+    <update id="updateimgById" parameterType="HashMap">
+        update sys_user
+        set photo = #{photo}
+        where id = #{id}
+    </update>
+
+    <!--============================根据Id更新员工信息============================-->
+    <update id="updateEmployee" parameterType="HashMap">
+        update sys_user
+        set sys_user.name = #{name}
+          ,sys_user.username=#{username}
+          ,sys_user.photo=#{photo}
+          ,sys_user.email=#{email}
+        <if test="nickname!=null">
+            ,sys_user.nickname = #{nickname}
+        </if>
+        <if test="sex!=null">
+            ,sys_user.sex = #{sex}
+        </if>
+        <if test="birthday!=null">
+            ,sys_user.birthday = #{birthday}
+        </if>
+        <if test="hiredate!=null">
+            ,sys_user.hiredate = DATE_FORMAT(#{hiredate},'%Y-%m-%d %H:%i:%S')
+        </if>
+        <if test="role!=null">
+            ,role = #{role}
+        </if>
+
+        <if test="tel!=null">
+            ,sys_user.tel = #{tel}
+        </if>
+        <if test="status!=null">
+            ,sys_user.status = #{status}
+        </if>
+        <if test="password!=null">
+            ,sys_user.password = #{password}
+        </if>
+        <if test="salt!=null">
+            ,sys_user.salt = #{salt}
+        </if>
+        <if test="updatetime!=null">
+            ,sys_user.update_time = #{updatetime}
+        </if>
+        ,sys_user.company_id =  #{companyId},sys_user.dept_id = #{deptId}
+        where sys_user.id=#{userId}
+    </update>
+
+    <!--============================新增员工============================-->
+    <insert id="insertEmployee" parameterType="HashMap">
+        INSERT INTO sys_user
+        SET sys_user.name = #{name}
+        ,sys_user.username=#{username}
+        ,sys_user.photo=#{photo}
+        ,sys_user.email=#{email}
+        <if test="nickname!=null">
+            ,sys_user.nickname = #{nickname}
+        </if>
+        <if test="sex!=null">
+            ,sys_user.sex = #{sex}
+        </if>
+        <if test="birthday!=null">
+            ,sys_user.birthday = #{birthday}
+        </if>
+        <if test="hiredate!=null">
+            ,sys_user.hiredate = DATE_FORMAT(#{hiredate},'%Y-%m-%d %H:%i:%S')
+        </if>
+        <if test="deptId!=null">
+            ,sys_user.dept_id = #{deptId}
+        </if>
+        <if test="companyId!=null">
+            ,sys_user.company_id = #{companyId}
+        </if>
+        <if test="tel!=null">
+            ,sys_user.tel = #{tel}
+        </if>
+        <if test="role!=null">
+            ,sys_user.role = JSON_Array(#{role})
+        </if>
+        <if test="code!=null">
+            ,sys_user.code = #{code}
+        </if>
+        <if test="password!=null">
+            ,sys_user.password = #{password}
+        </if>
+        <if test="salt!=null">
+            ,sys_user.salt = #{salt}
+        </if>
+        ,sys_user.create_time = #{createTime}
+        ,sys_user.root = #{root}
+        ,sys_user.status = 1
+    </insert>
+
+    <!--============================查询用户名是否存在（排除自身）============================-->
+    <select id="selectUserNameCheck" resultType="java.lang.Integer">
+        select count(*)
+        from (select username
+              from sys_user
+              where id!=#{userId} and username=#{username}) temp
+    </select>
+
+    <!--============================查询邮箱是否存在（排除自身）============================-->
+    <select id="selectEmailExitCheck" resultType="java.lang.Integer">
+        select count(*)
+        from (select email
+        from sys_user
+        where id!=#{userId} and email=#{email}) temp
+    </select>
+
+    <!--============================查询用户表最大的code编号============================-->
+    <select id="searchMaxCode" resultType="java.lang.String">
+        select MAX(code) from sys_user ORDER BY code DESC LIMIT 1
+    </select>
+
+    <!--============================用户列表分页查询============================-->
+    <select id="searchUserByPage" parameterType="HashMap" resultType="com.example.springbootdemo.db.vo.SysUserVo">
+        SELECT sys_user.id,
+        sys_user.tel,
+        sys_user.code,
+        sys_user.sex,
+        sys_user.name,
+        sys_user.nickname,
+        sys_user.email,
+        sys_user.photo,
+        sys_user.`username`,
+        sys_user.`status`,
+        DATE_FORMAT(sys_user.hiredate,'%Y-%m-%d') AS hiredate,
+        DATE_FORMAT(sys_user.login_time,'%Y-%m-%d %H:%i:%S') AS loginDate,
+        DATE_FORMAT(sys_user.create_time,'%Y-%m-%d %H:%i:%S') AS createTime,
+        DATE_FORMAT(sys_user.birthday,'%Y-%m-%d') AS birthday
+        FROM sys_user
+        WHERE 1=1
+        <if test="status!=null">
+            AND sys_user.`status` = #{status}
+        </if>
+        <if test="tel!=null">
+            AND sys_user.tel = #{tel}
+        </if>
+        <if test="sex!=null">
+            AND sys_user.sex = #{sex}
+        </if>
+        <if test="code!=null">
+            AND sys_user.code = #{code}
+        </if>
+        <if test="userId!=null">
+            AND sys_user.id = #{userId}
+        </if>
+        <if test="username!=null">
+            AND sys_user.`username` LIKE '%${username}%'
+        </if>
+        <if test="startHireDate!=null &amp; endHireDate!=null">
+            AND sys_user.hiredate BETWEEN #{startHireDate} AND #{endHireDate}
+        </if>
+        <if test="startLoginDate!=null &amp; endLoginDate!=null">
+            AND sys_user.login_time BETWEEN #{startLoginDate} AND #{endLoginDate}
+        </if>
+        AND IFNULL(sys_user.dept_id,0)='' AND IFNULL(sys_user.company_id,0)=''
+        ORDER BY sys_user.id DESC
+        LIMIT #{start}, #{length}
+    </select>
+
+
+    <!--============================查询用户总数============================-->
+    <select id="searchUserCount" parameterType="HashMap" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM sys_user
+        WHERE 1=1
+        <if test="status!=null">
+            AND sys_user.`status` = #{status}
+        </if>
+        <if test="tel!=null">
+            AND sys_user.tel = #{tel}
+        </if>
+        <if test="sex!=null">
+            AND sys_user.sex = #{sex}
+        </if>
+        <if test="code!=null">
+            AND sys_user.code = #{code}
+        </if>
+        <if test="userId!=null">
+            AND sys_user.id = #{userId}
+        </if>
+        <if test="username!=null">
+            AND sys_user.`username` LIKE '%${username}%'
+        </if>
+        <if test="startHireDate!=null &amp; endHireDate!=null">
+            AND sys_user.hiredate BETWEEN #{startHireDate} AND #{endHireDate}
+        </if>
+        <if test="startLoginDate!=null &amp; endLoginDate!=null">
+            AND sys_user.login_time BETWEEN #{startLoginDate} AND #{endLoginDate}
+        </if>
+        AND IFNULL(sys_user.dept_id,0)='' AND IFNULL(sys_user.company_id,0)=''
+    </select>
+
+    <!--============================注册员工============================-->
+    <update id="updateUserUpEmployee" parameterType="HashMap">
+        UPDATE sys_user
+        SET dept_id = (select id from sys_dept where dept_name = #{deptName}),
+            company_id = (select id from sys_company where company_name = #{companyName}),
+            hiredate = DATE_FORMAT(#{hiredate},'%Y-%m-%d %H:%i:%S')
+        WHERE id = #{userId}
+    </update>
+
+    <!--============================查询全部的用户数据============================-->
+    <select id="selectAllUserExcel" resultType="java.util.HashMap">
+        SELECT sys_user.tel,
+        sys_user.code,
+        sys_user.sex,
+        sys_user.name,
+        sys_user.nickname,
+        sys_user.email,
+        sys_user.photo,
+        sys_user.`username`,
+        sys_user.`status`,
+        DATE_FORMAT(sys_user.login_time,'%Y-%m-%d %H:%i:%S') AS loginDate,
+        DATE_FORMAT(sys_user.create_time,'%Y-%m-%d %H:%i:%S') AS createTime,
+        DATE_FORMAT(sys_user.birthday,'%Y-%m-%d') AS birthday
+        FROM sys_user
+        WHERE 1=1
+        AND IFNULL(sys_user.dept_id,0)='' AND IFNULL(sys_user.company_id,0)=''
+    </select>
+
+    <!--============================查询全部的员工数据============================-->
+    <select id="selectAllEmployeeExcel" resultType="java.util.HashMap">
+        SELECT sys_user.tel,
+               sys_user.code,
+               sys_user.sex,
+               sys_user.name,
+               sys_user.nickname,
+               sys_user.email,
+               sys_user.photo,
+               sys_user.`username`,
+               sys_user.`status`,
+               sys_dept.dept_name AS deptName,
+               sys_company.company_name AS companyName,
+               DATE_FORMAT(sys_user.hiredate,'%Y-%m-%d') AS hiredate,
+               DATE_FORMAT(sys_user.login_time,'%Y-%m-%d %H:%i:%S') AS loginDate,
+               DATE_FORMAT(sys_user.create_time,'%Y-%m-%d %H:%i:%S') AS createTime,
+               DATE_FORMAT(sys_user.birthday,'%Y-%m-%d') AS birthday
+        FROM sys_user
+        JOIN sys_dept ON sys_dept.id = sys_user.dept_id
+        JOIN sys_company ON sys_company.id = sys_user.company_id
+        WHERE 1=1
+    </select>
+
+    <!--============================实现导入用户信息============================-->
+    <insert id="insertUsers" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user(name,username,email,status,nickname,sex,birthday,create_time,tel,code,password,salt,role,root)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+        (#{item.name}
+        ,#{item.username}
+        ,#{item.email}
+        ,#{item.status}
+        ,#{item.nickname}
+        ,#{item.sex}
+        , DATE_FORMAT(#{item.birthday},'%Y-%m-%d')
+        , DATE_FORMAT(#{item.createTime},'%Y-%m-%d %H:%i:%S')
+        ,#{item.tel}
+        ,#{item.code}
+        ,#{item.password}
+        ,#{item.salt}
+        ,JSON_Array(#{item.role})
+        ,#{item.root})
+        </foreach>
+    </insert>
+
+    <!--============================实现导入员工信息============================-->
+    <insert id="insertEmployees" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_user(name,username,email,status,nickname,sex,birthday,create_time,tel,code,password,salt,role,root,dept_id,company_id,hiredate)
+        VALUES
+        <foreach item="item" collection="list" separator=",">
+            (#{item.name}
+            ,#{item.username}
+            ,#{item.email}
+            ,#{item.status}
+            ,#{item.nickname}
+            ,#{item.sex}
+            , DATE_FORMAT(#{item.birthday},'%Y-%m-%d')
+            , DATE_FORMAT(#{item.createTime},'%Y-%m-%d %H:%i:%S')
+            ,#{item.tel}
+            ,#{item.code}
+            ,#{item.password}
+            ,#{item.salt}
+            ,JSON_Array(#{item.role})
+            ,#{item.root}
+            ,(select id from sys_dept where dept_name = #{item.deptName})
+            ,(select id from sys_company where company_name = #{item.companyName})
+            ,DATE_FORMAT(#{item.hiredate},'%Y-%m-%d %H:%i:%S')
+            )
+        </foreach>
+    </insert>
+
+    <!--============================根据id查询照片信息============================-->
+    <select id="searchPhotoById" resultType="java.lang.String" parameterType="Integer">
+        SELECT photo
+        FROM sys_user
+        WHERE id = #{userId}
+    </select>
+
+</mapper>
